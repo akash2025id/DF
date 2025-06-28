@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Neon Portal with AI Bot</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --neon: #0fffc1;
+      --bg: #181a20;
+      --panel: #23253a;
+      --text: #e7e7e7;
+      --accent: #aaff00;
+      --danger: #ff0055;
+      --border: 2px solid var(--neon);
+      --shadow: 0 0 10px var(--neon), 0 0 20px var(--neon);
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0; padding: 0;
+      min-height: 100vh;
+    }
+    header {
+      display: flex; justify-content: space-around; align-items: center;
+      background: #101126; padding: 1em 0; box-shadow: var(--shadow);
+      border-bottom: var(--border); position: sticky; top: 0; z-index: 10;
+    }
+    header button {
+      background: none; border: none; color: var(--neon); font-size: 1.1em;
+      margin: 0 1em; cursor: pointer; padding: 0.5em 1em; transition: color 0.2s;
+      border-bottom: 2px solid transparent; letter-spacing: 2px;
+    }
+    header button.active,
+    header button:hover { color: var(--accent); border-bottom: 2px solid var(--accent);}
+    main { max-width: 900px; margin: 2em auto; background: var(--panel); border-radius: 1.3em; box-shadow: var(--shadow); padding: 2em; min-height: 65vh;}
+    section { display: none; }
+    section.active { display: block; }
+    input, textarea, select {
+      background: #181a20; color: var(--neon); border: var(--border);
+      border-radius: 6px; padding: 0.5em; margin: 0.5em 0 1em 0; width: 100%;
+      font-size: 1em; outline: none; box-shadow: 0 0 8px #0fffc155;
+      transition: border 0.2s, box-shadow 0.2s;
+    }
+    input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+    label { font-weight: bold; color: var(--accent); }
+    button, .neon-btn {
+      background: linear-gradient(90deg, var(--neon), var(--accent));
+      color: #181a20; border: none; border-radius: 6px;
+      font-weight: bold; padding: 0.6em 1.5em; margin: 1em 0;
+      cursor: pointer; box-shadow: var(--shadow); font-size: 1.05em;
+      transition: background 0.2s, color 0.2s;
+      letter-spacing: 1.3px;
+    }
+    button.danger, .neon-btn.danger { background: var(--danger); color: #fff; }
+    .section-title { font-size: 2em; color: var(--neon); margin-bottom: 1em; text-shadow: var(--shadow);}
+    table { width:100%; border-collapse: collapse; }
+    th, td { border: 1px solid var(--accent); padding: 0.8em; }
+    th { background: #22243b;}
+    td { background: #161821;}
+    .login-wrap {max-width: 400px; margin: 2em auto;}
+    .login-msg {color: var(--danger);}
+    .neon-card {
+      box-shadow: 0 0 18px var(--neon), 0 0 2px #000;
+      border: 1.8px solid var(--neon);
+      border-radius: 1em;
+      background: #1b1d29;
+      padding: 1.2em;
+      margin-bottom: 1.2em;
+    }
+    /* Floating Bot Widget */
+    #aiBotWidget {
+      position: fixed; bottom: 32px; right: 32px; z-index: 2000;
+      background: #101126; border-radius: 50%; box-shadow: var(--shadow);
+      width: 66px; height: 66px; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; border: var(--border);
+      animation: neon-pulse 1.7s infinite alternate;
+    }
+    @keyframes neon-pulse {
+      from { box-shadow: 0 0 10px var(--neon), 0 0 20px var(--neon);}
+      to { box-shadow: 0 0 30px var(--accent), 0 0 40px var(--accent);}
+    }
+    #aiBotWidget svg { width: 42px; height: 42px; }
+    /* Bot Modal */
+    #aiModalOverlay {
+      display: none; position: fixed; left: 0; top: 0; width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.38); z-index: 2100;
+      align-items: flex-end; justify-content: flex-end;
+    }
+    #aiModalOverlay.open { display: flex;}
+    #aiBotModal {
+      background: #22243b; border-radius: 1.2em 1.2em 0 0; box-shadow: var(--shadow);
+      width: 350px; max-width: 97vw; max-height: 85vh; overflow: hidden;
+      margin: 0 2vw 3vw 0; display: flex; flex-direction: column;
+      animation: fadein 0.2s;
+    }
+    @keyframes fadein {from{opacity:0;transform:translateY(40px);} to{opacity:1;transform:translateY(0);}}
+    #aiBotModal header {
+      background: var(--neon); color: #1b1b1b; font-weight: bold; font-size: 1.13em;
+      padding: 1em; text-align: center; letter-spacing: 1.2px;
+    }
+    #aiBotModal .bot-q-list {
+      flex:1; background: #191a27; overflow-y: auto; padding:1em; display: flex; flex-direction: column; gap: 0.8em;
+    }
+    .bot-q-btn {
+      background: #181a20; color: var(--neon); border: var(--border); border-radius: 8px;
+      padding: 0.6em 1em; font-size: 1em; cursor: pointer; text-align: left; transition: background 0.18s;
+    }
+    .bot-q-btn:hover { background: #23253a; color: var(--accent);}
+    .ai-bot-ans-box {
+      padding: 1em 1em 1.2em 1em; background: #161821;
+      border-top: 1.5px solid var(--neon);
+    }
+    .ai-bot-ans-section {
+      margin-bottom: 0.7em; border-left: 4px solid var(--neon); padding-left: 0.7em;
+      background: #101126; border-radius: 7px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .ai-bot-ans-section .text { font-size: 1.08em; }
+    .ai-bot-ans-section .speaker-btn {
+      background: none; border: none; color: var(--neon); font-size: 1.35em; margin-left: 0.6em; cursor: pointer;
+    }
+    /* Responsive */
+    @media (max-width: 700px) {
+      main { padding: 0.7em;}
+      #aiBotModal { width: 99vw;}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <button class="nav-btn active" data-section="form">Form</button>
+    <button class="nav-btn" data-section="admin">Admin Panel</button>
+  </header>
+  <main>
+    <!-- Form Section -->
+    <section id="form" class="active">
+      <div class="section-title">Registration Form</div>
+      <form id="userForm">
+        <label>Name</label>
+        <input name="name" required>
+        <label>Age</label>
+        <input name="age" type="number" min="1" required>
+        <label>Mobile No</label>
+        <input name="mobile" type="tel" pattern="[0-9]{10,15}" required>
+        <label>WhatsApp No</label>
+        <input name="whatsapp" type="tel" pattern="[0-9]{10,15}" required>
+        <label>Email</label>
+        <input name="email" type="email" required>
+        <label>Address</label>
+        <textarea name="address" rows="2" required></textarea>
+        <button type="submit" class="neon-btn">Submit</button>
+        <div id="formMsg"></div>
+      </form>
+    </section>
+    <!-- Admin Panel Section -->
+    <section id="admin">
+      <div class="section-title">Admin Panel</div>
+      <div id="adminWrap"></div>
+    </section>
+  </main>
+  <!-- Floating AI Bot Widget -->
+  <div id="aiBotWidget" title="Ask Miss Aripa!">
+    <svg viewBox="0 0 64 64" fill="none"><circle cx="32" cy="32" r="32" fill="#181a20"/><ellipse cx="32" cy="44.5" rx="18" ry="8.5" fill="#0fffc1" fill-opacity=".45"/><circle cx="32" cy="28" r="18" fill="#0fffc1" stroke="#aaff00" stroke-width="2"/><ellipse cx="32" cy="30" rx="8" ry="10" fill="#181a20"/><ellipse cx="28" cy="26" rx="2.5" ry="3.5" fill="#0fffc1"/><ellipse cx="36" cy="26" rx="2.5" ry="3.5" fill="#0fffc1"/><ellipse cx="32" cy="34" rx="5" ry="2" fill="#0fffc1" fill-opacity=".8"/></svg>
+  </div>
+  <!-- AI Modal -->
+  <div id="aiModalOverlay">
+    <div id="aiBotModal">
+      <header>
+        <span>Miss. ripa (AI Bot)</span>
+        <button onclick="closeAIModal()" style="float:right;background:none;border:none;color:#181a20;font-weight:bold;font-size:1.05em;cursor:pointer;">&times;</button>
+      </header>
+      <div class="bot-q-list" id="aiQList"></div>
+      <div class="ai-bot-ans-box" id="aiABAnsBox"></div>
+    </div>
+  </div>
+  <script>
+    // Section Navigation
+    document.querySelectorAll('.nav-btn').forEach(btn=>{
+      btn.onclick = function(){
+        document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('main section').forEach(s=>s.classList.remove('active'));
+        document.getElementById(btn.dataset.section).classList.add('active');
+        // If admin section is clicked, render admin panel
+        if(btn.dataset.section === 'admin') {
+          renderAdmin();
+        }
+      };
+    });
+    // Store & Load
+    function getData(key, fallback){ return JSON.parse(localStorage.getItem(key)||'null')||fallback;}
+    function setData(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+
+    // ---- Form Section ----
+    document.getElementById('userForm').onsubmit = function(e){
+      e.preventDefault();
+      let obj={};
+      [...this.elements].forEach(el=>el.name&&(obj[el.name]=el.value));
+      obj.dt = new Date().toISOString().slice(0,10);
+      let arr = getData('submissions',[]);
+      arr.push(obj);
+      setData('submissions', arr);
+      this.reset();
+      document.getElementById('formMsg').innerHTML = "<span style='color:var(--accent);'>Submitted! Thank you.</span>";
+      setTimeout(()=>document.getElementById('formMsg').innerHTML='',2000);
+    }
+
+    // ---- Admin Panel ----
+    function renderAdmin(){
+      let logged = sessionStorage.getItem('adminLogged')==='1';
+      document.getElementById('adminWrap').innerHTML = logged ? adminPanelHTML() : adminLoginHTML();
+      if(logged) adminPanelLoaded();
+    }
+    function adminLoginHTML(){
+      return `<div class="login-wrap neon-card">
+        <div><b>Admin Login</b></div>
+        <input id="adminPass" type="password" placeholder="Password">
+        <button onclick="adminLogin()" class="neon-btn">Login</button>
+        <div class="login-msg" id="adminLoginMsg"></div>
+      </div>`;
+    }
+    function adminPanelHTML(){
+      return `<div>
+        <button onclick="adminLogout()" class="neon-btn danger" style="float:right;">Logout</button>
+        <div style="margin-bottom:1.5em;"><b>Submissions (by Date)</b></div>
+        <div id="adminSubs"></div>
+      </div>`;
+    }
+    function adminPanelLoaded(){
+      // Submissions table
+      let subs = getData('submissions',[]);
+      if(!subs.length){
+        document.getElementById('adminSubs').innerHTML = "<i>No submissions yet.</i>";
+      }else{
+        let byDate = {};
+        subs.forEach(s=>{
+          byDate[s.dt] = byDate[s.dt]||[];
+          byDate[s.dt].push(s);
+        });
+        document.getElementById('adminSubs').innerHTML = Object.entries(byDate).map(([date,arr])=>`
+          <div style="margin:1em 0;">
+            <b style="color:var(--neon);">${date}</b>
+            <table>
+              <tr><th>Name</th><th>Age</th><th>Mobile</th><th>Whatsapp</th><th>Email</th><th>Address</th></tr>
+              ${arr.map(s=>`
+                <tr>
+                  <td>${s.name}</td>
+                  <td>${s.age}</td>
+                  <td>${s.mobile}</td>
+                  <td>${s.whatsapp}</td>
+                  <td>${s.email}</td>
+                  <td>${s.address}</td>
+                </tr>
+              `).join('')}
+            </table>
+          </div>
+        `).join('');
+      }
+    }
+    window.adminLogin = function(){
+      let pass = document.getElementById('adminPass').value;
+      if(pass==='admin123'){
+        sessionStorage.setItem('adminLogged','1');
+        renderAdmin();
+      }else{
+        document.getElementById('adminLoginMsg').innerText = "Wrong password!";
+      }
+    }
+    window.adminLogout = function(){
+      sessionStorage.removeItem('adminLogged');
+      renderAdmin();
+    }
+
+    // Initialize admin panel on page load
+    renderAdmin();
+
+    // ---- AI BOT FLOATING WIDGET ----
+    const aiQnA = [
+      {
+        q_en: "What is your name?",
+        a_en: "My name is Miss. ripa. I'm your helpful AI Friend.",
+        q_bn: "আপনার নাম কী?",
+        a_bn: "আমার নাম মিস রিপা। আমি আপনার সাহায্যকারী এআই বন্ধু।"
+      },
+      {
+        q_en: "How are you?",
+        a_en: "I'm fine! Thank you.",
+        q_bn: "আপনি কেমন আছেন?",
+        a_bn: "আমি ভালো আছি! ধন্যবাদ।"
+      },
+      {
+        q_en: "What can you do?",
+        a_en: "I can answer your questions and help you here.",
+        q_bn: "আপনি কী করতে পারেন?",
+        a_bn: "আমি আপনার প্রশ্নের উত্তর দিতে এবং আপনাকে সাহায্য করতে পারি।"
+      },
+      {
+        q_en: "How to submit the form?",
+        a_en: "Fill all fields in the form and click Submit. Your data will be saved.",
+        q_bn: "ফর্ম সাবমিট করবেন কীভাবে?",
+        a_bn: "সব ঘর পূরণ করে সাবমিট বাটনে ক্লিক করুন। আপনার তথ্য সংরক্ষিত হবে।"
+      },
+      {
+        q_en: "Where can I see my submitted data?",
+        a_en: "Only the admin can see all submissions from the admin panel.",
+        q_bn: "আমি আমার সাবমিট করা তথ্য কোথায় দেখতে পারি?",
+        a_bn: "শুধুমাত্র অ্যাডমিন প্যানেল থেকে অ্যাডমিন সকল সাবমিশন দেখতে পারবেন।"
+      },
+      {
+        q_en: "Who is the developer?",
+        a_en: "This portal is developed for your needs! This system has been developed by our respected mentor Mr. Wang Akash.",
+        q_bn: "ডেভেলপার কে?",
+        a_bn: "এই পোর্টালটি আপনার প্রয়োজনের জন্য তৈরি করা হয়েছে!এই সিস্টেমটি তৈরি করেছেন আমার সম্মানিত গুরু ওয়াং আকাশ।"
+      },
+      {
+        q_en: "Give a positive quote.",
+        a_en: "Believe in yourself and all that you are.",
+        q_bn: "একটি ইতিবাচক উক্তি দিন।",
+        a_bn: "নিজের উপর বিশ্বাস রাখুন এবং আপনি যা কিছু আছেন তা বিশ্বাস করুন।"
+      }
+    ];
+    // Populate question list
+    function renderAIQuestions(){
+      let html = "";
+      aiQnA.forEach((item,i)=>{
+        html += `<button class="bot-q-btn" onclick="showBotAns(${i})">
+          <b>EN:</b> ${item.q_en}<br>
+          <b>BN:</b> ${item.q_bn}
+        </button>`;
+      });
+      document.getElementById('aiQList').innerHTML = html;
+    }
+    renderAIQuestions();
+    // show modal
+    const botWidget = document.getElementById('aiBotWidget');
+    const aiModal = document.getElementById('aiModalOverlay');
+    botWidget.onclick = function(){
+      aiModal.classList.add('open');
+    }
+    window.closeAIModal = function(){
+      aiModal.classList.remove('open');
+      document.getElementById('aiABAnsBox').innerHTML = '';
+    }
+    // show answer
+    window.showBotAns = function(idx){
+      const d = aiQnA[idx];
+      document.getElementById('aiABAnsBox').innerHTML = `
+        <div class="ai-bot-ans-section">
+          <span class="text"><b>English:</b> <span id="ansEN">${d.a_en}</span></span>
+          <button class="speaker-btn" onclick="speakAI('en')">&#128266;</button>
+        </div>
+        <div class="ai-bot-ans-section">
+          <span class="text"><b>বাংলা:</b> <span id="ansBN">${d.a_bn}</span></span>
+          <button class="speaker-btn" onclick="speakAI('bn')">&#128266;</button>
+        </div>
+      `;
+    }
+    // AI Speech
+    window.speakAI = function(lang){
+      let txt = lang==='en'
+        ? document.getElementById('ansEN').innerText
+        : document.getElementById('ansBN').innerText;
+      let synth = window.speechSynthesis;
+      let utter = new SpeechSynthesisUtterance(txt);
+      // Try pick female voice in correct language
+      let voices = synth.getVoices();
+      let wantedLang = lang==='en' ? 'en' : 'bn';
+      let femaleVoice = voices.find(v=>
+        v.lang && v.lang.toLowerCase().startsWith(wantedLang) &&
+        v.name.toLowerCase().includes("female")
+      ) || voices.find(v=>
+        v.lang && v.lang.toLowerCase().startsWith(wantedLang) &&
+        v.gender==="female"
+      ) || voices.find(v=>
+        v.lang && v.lang.toLowerCase().startsWith(wantedLang)
+      );
+      if(femaleVoice) utter.voice = femaleVoice;
+      utter.lang = wantedLang==='en'?'en-US':'bn-BD';
+      utter.pitch = 1.12; utter.rate = 1; utter.volume=1;
+      synth.speak(utter);
+    };
+    // Preload voices on load (for quick access)
+    window.speechSynthesis.onvoiceschanged = ()=>{};
+  </script>
+</body>
+</html>
